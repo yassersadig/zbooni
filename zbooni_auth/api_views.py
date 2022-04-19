@@ -1,7 +1,7 @@
 from rest_framework.generics import CreateAPIView
 from rest_framework.views import APIView
 from django.contrib.auth.models import User
-from .serializers import UserSerializer
+from .serializers import UserSerializer, LimitedUserSerializer
 from rest_framework.response import Response
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.shortcuts import get_current_site
@@ -9,6 +9,8 @@ from rest_framework import status
 from django.urls import reverse
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import viewsets
+from django.shortcuts import get_object_or_404
 
 
 class UserRegistration(CreateAPIView):
@@ -85,3 +87,18 @@ class UserChangePassword(APIView):
         user.set_password(password)
         user.save()
         return Response({'Success': "Password Changed Successfully!"})
+
+
+class UserViewSet(viewsets.ViewSet):
+    def list(self, request):
+        serializer_class = UserSerializer if request.user.is_authenticated else LimitedUserSerializer
+        queryset = User.objects.all()
+        serializer = serializer_class(queryset, many=True)
+        return Response(serializer.data)
+
+    def retrieve(self, request, pk=None):
+        serializer_class = UserSerializer if request.user.is_authenticated else LimitedUserSerializer
+        queryset = User.objects.all()
+        user = get_object_or_404(queryset, pk=pk)
+        serializer = serializer_class(user)
+        return Response(serializer.data)
