@@ -7,6 +7,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.shortcuts import get_current_site
 from rest_framework import status
 from django.urls import reverse
+from rest_framework.authtoken.models import Token
 
 
 class UserRegistration(CreateAPIView):
@@ -43,3 +44,22 @@ class UserActivation(APIView):
             return Response(UserSerializer(user).data)
         else:
             return Response({'Error': error_message})
+
+
+class UserLogin(APIView):
+
+    def post(self, request, format=None):
+        email = request.data.get('email', False)
+        password = request.data.get('password', False)
+        if not (email and password):
+            return Response({'Error': 'Both Email and Password are required!'})
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found!'})
+
+        if not user.check_password(password):
+            return Response({'Error': 'Incorrect password!'})
+
+        token = Token.objects.get_or_create(user=user)
+        return Response({'Access Token': token[0].key})
