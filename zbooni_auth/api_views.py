@@ -8,6 +8,7 @@ from django.contrib.sites.shortcuts import get_current_site
 from rest_framework import status
 from django.urls import reverse
 from rest_framework.authtoken.models import Token
+from rest_framework.permissions import IsAuthenticated
 
 
 class UserRegistration(CreateAPIView):
@@ -63,3 +64,24 @@ class UserLogin(APIView):
 
         token = Token.objects.get_or_create(user=user)
         return Response({'Access Token': token[0].key})
+
+
+class UserChangePassword(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, format=None):
+        uid = request.data.get('uid', False)
+        password = request.data.get('password', False)
+        if not (uid and password):
+            return Response({'Error': 'Both User ID and the New Password are required!'})
+        try:
+            user = User.objects.get(id=uid)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found!'})
+
+        if request.user != user:
+            return Response({'Error': 'A User Can Only Change their Own Password!'})
+
+        user.set_password(password)
+        user.save()
+        return Response({'Success': "Password Changed Successfully!"})
